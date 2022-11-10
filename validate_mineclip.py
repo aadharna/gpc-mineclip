@@ -6,7 +6,7 @@ from mineclip import MineCLIP
 
 
 @torch.no_grad()
-@hydra.main(config_name="conf", config_path=".", version_base="1.1")
+@hydra.main(config_name="clip_conf", config_path=".", version_base="1.1")
 def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     OmegaConf.set_struct(cfg, False)

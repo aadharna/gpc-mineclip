@@ -7,7 +7,7 @@ from mineclip.mineagent.batch import Batch
 
 
 @torch.no_grad()
-@hydra.main(config_name="conf", config_path=".", version_base="1.1")
+@hydra.main(config_name="agent_conf", config_path=".", version_base="1.1")
 def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
