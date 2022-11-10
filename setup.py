@@ -9,5 +9,5 @@ setup(
     author='Aaron Dharna, Ruiyu Gou, Nicholas Ioannidis',
     author_email='',
     description='',
-    install_requires=['mineclip']
+    install_requires=[]
 )
