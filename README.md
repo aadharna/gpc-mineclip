@@ -17,8 +17,6 @@ To do so, run the following commands:
 
 ```bash
 # inside the docker container
+pip install git+https://github.com/MineDojo/MineCLIP
 
-# pip install -e .
-# or
-python setup.py # this is probably the right way to get mineclip rather than the editable install above.
 ```
