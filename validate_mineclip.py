@@ -10,10 +10,12 @@ from mineclip import MineCLIP
 def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     OmegaConf.set_struct(cfg, False)
-    cfg.pop("ckpt")
+    ckpt = cfg.pop("ckpt")
     OmegaConf.set_struct(cfg, True)
 
     model = MineCLIP(**cfg).to(device)
+    weights = torch.load(ckpt['path'])
+    model.load_state_dict(weights,strict=False)
 
     video = torch.randint(0, 255, (6, 16, 3, 160, 256), device=device)
     prompts = [

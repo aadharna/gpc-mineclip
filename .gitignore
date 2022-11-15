@@ -130,3 +130,6 @@ dmypy.json
 
 #Log Files
 *.log
+
+# weights
+*.pth

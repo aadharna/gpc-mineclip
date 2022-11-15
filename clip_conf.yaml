@@ -11,7 +11,7 @@ pool_type: ???  # filled by variant
 resolution: [160, 256]
 
 ckpt:
-  path: null  # filled by users
+  path: "mc_weights/attn.pth"  # filled by users
   checksum: ???
 
 hydra:
