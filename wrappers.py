@@ -7,7 +7,7 @@ import torchvision.transforms as T
 
 
 class MineClipWrapper(gym.Wrapper):
-    def __init__(self, env,prompts):
+    def __init__(self, env, prompts):
         super().__init__(env)
         self.env = env
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -19,14 +19,14 @@ class MineClipWrapper(gym.Wrapper):
         OmegaConf.set_struct(cfg, True)
         self.model = MineCLIP(**cfg).to(self.device)
         weights = torch.load(ckpt['path'])
-        self.model.load_state_dict(weights,strict=False)
+        self.model.load_state_dict(weights, strict=False)
         self.model.eval()
 
         # Calculate Initial features for prompts and dummy frames 
         with torch.no_grad():
             self.prompt_feats = self.model.encode_text(prompts)
-            initial_frames = torch.zeros((1, 16, 3, 160, 256),dtype=torch.int64, device=self.device)
-            self.initial_feats =  self.model.forward_image_features(initial_frames)
+            initial_frames = torch.zeros((1, 16, 3, 160, 256), dtype=torch.int64, device=self.device)
+            self.initial_feats = self.model.forward_image_features(initial_frames)
             self.image_feats = self.initial_feats.clone().detach()
 
         #self.transform = T.Resize((160,256)) # Transformation to downsample image
@@ -39,19 +39,19 @@ class MineClipWrapper(gym.Wrapper):
             frame = next_state['rgb'].copy()
             frame = torch.from_numpy(frame).to(self.device)
             #frame = self.transform(frame)
-            frame = torch.unsqueeze(torch.unsqueeze(frame,dim=0),dim=0)
+            frame = torch.unsqueeze(torch.unsqueeze(frame, dim=0), dim=0)
             img_feats = self.model.forward_image_features(frame)
-            self.image_feats = torch.cat((self.image_feats[:,1:,:],img_feats),dim=1)
+            self.image_feats = torch.cat((self.image_feats[:, 1:, :], img_feats), dim=1)
             video_feats = self.model.forward_video_features(self.image_feats)
-            prompt = torch.unsqueeze(self.prompt_feats[self.pi],dim=0)
+            prompt = torch.unsqueeze(self.prompt_feats[self.pi], dim=0)
             reward, _ = self.model(video_feats, text_tokens=prompt, is_video_features=True)
-            delta_reward = reward- self.previous_reward
+            delta_reward = reward - self.previous_reward
             self.previous_reward = reward
         return next_state, delta_reward.item(), done, info
 
     def change_prompt(self, index=None):
         if index is None:
-            self.pi +=1
+            self.pi += 1
         else:
             self.pi = index
 
@@ -76,10 +76,8 @@ class MonitorAndSwitchRewardFn(gym.Wrapper):
         self.running_average = self.running_average_class.process(reward)
 
         if self.running_average >= self.subtask_solved_threshold:
-            try:
-                self.env.change_prompt()
-            except IndexError:
-                # we have exhausted all the tasks in the prompt list
+            self.env.change_prompt()
+            if self.env.pi == len(self.env.prompt_feats):
                 done = True
 
         return next_state, reward, done, info
