@@ -1,0 +1,1 @@
+python ppo.py --exp-name="test" --seed=42 --track=True --wandb-project-name="test" 
