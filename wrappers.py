@@ -5,6 +5,8 @@ from mineclip import MineCLIP
 import torchvision.transforms as T
 import torchvision.transforms as T
 
+import numpy as np
+
 class MineClipWrapper(gym.Wrapper):
     def __init__(self, env,prompts):
         super().__init__(env)
@@ -59,3 +61,47 @@ class MineClipWrapper(gym.Wrapper):
         self.previous_reward = 0
         self.env.reset()
 
+
+class MonitorAndSwitchRewardFn(gym.Wrapper):
+    def __init__(self, env, window_size=25, subtask_solved_threshold=0.95):
+        super().__init__(env)
+        assert(isinstance(env, MineClipWrapper))
+        self.env = env
+        self.subtask_solved_threshold = subtask_solved_threshold
+        self.running_average_class = StreamingMovingAverage(window_size)
+        self.running_average = 0
+
+    def step(self, action):
+        next_state, reward, done, info = self.env.step(action)
+        # sets the self.running_average variable
+        self.running_average = self.running_average_class.process(reward)
+
+        if self.running_average >= self.subtask_solved_threshold:
+            try:
+                self.env.change_prompt()
+            except IndexError:
+                # we have exhausted all the tasks in the prompt list
+                done = True
+
+        return next_state, reward, done, info
+
+    def reset(self):
+        return self.env.reset()
+
+    def get_running_average(self):
+        return self.running_average
+
+
+# calculate a running average without using np.mean every time on a list
+class StreamingMovingAverage:
+    def __init__(self, window_size):
+        self.window_size = window_size
+        self.values = []
+        self.sum = 0
+
+    def process(self, value):
+        self.values.append(value)
+        self.sum += value
+        if len(self.values) > self.window_size:
+            self.sum -= self.values.pop(0)
+        return float(self.sum) / len(self.values)
