@@ -69,6 +69,8 @@ class MonitorAndSwitchRewardFn(gym.Wrapper):
         self.subtask_solved_threshold = subtask_solved_threshold
         self.running_average_class = StreamingMovingAverage(window_size)
         self.running_average = 0
+        self.action_space = env.action_space
+        self.observation_space = env.observation_space
 
     def step(self, action):
         next_state, reward, done, info = self.env.step(action)
