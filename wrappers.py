@@ -5,7 +5,6 @@ from mineclip import MineCLIP
 import torchvision.transforms as T
 import torchvision.transforms as T
 
-import numpy as np
 
 class MineClipWrapper(gym.Wrapper):
     def __init__(self, env,prompts):
