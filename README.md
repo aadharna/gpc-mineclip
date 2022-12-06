@@ -41,4 +41,4 @@ python validate_mineagent.py
 
 ```
 ### MineClip Weights
-Pretrained weights are provided for  [attn](https://drive.google.com/file/d/1uaZM1ZLBz2dZWcn85rZmjP7LV6Sg5PZW/view?usp=sharing) and [avg](https://drive.google.com/file/d/1mFe09JsVS5FpZ82yuV7fYNFYnkz9jDqr/view?usp=sharing)
+Pretrained weights are provided for  [attn](https://drive.google.com/file/d/1uaZM1ZLBz2dZWcn85rZmjP7LV6Sg5PZW/view?usp=sharing) and [avg](https://drive.google.com/file/d/1mFe09JsVS5FpZ82yuV7fYNFYnkz9jDqr/view?usp=sharing). Place those weights at `mc_weights/attn.pth` or change where the `clip_conf.yaml` file is looking.
