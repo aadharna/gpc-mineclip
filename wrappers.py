@@ -3,11 +3,9 @@ from omegaconf import OmegaConf
 import torch
 from mineclip import MineCLIP
 import torchvision.transforms as T
-import torchvision.transforms as T
-
 
 class MineClipWrapper(gym.Wrapper):
-    def __init__(self, env, prompts):
+    def __init__(self, env,prompts):
         super().__init__(env)
         self.env = env
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,8 +16,7 @@ class MineClipWrapper(gym.Wrapper):
         ckpt = cfg.pop("ckpt")
         OmegaConf.set_struct(cfg, True)
         self.model = MineCLIP(**cfg).to(self.device)
-        weights = torch.load(ckpt['path'])
-        self.model.load_state_dict(weights, strict=False)
+        self.model.load_ckpt(ckpt.path,strict=True)
         self.model.eval()
 
         # Calculate Initial features for prompts and dummy frames 
