@@ -8,3 +8,144 @@ task1:
     - After you have built your house, you need to decorate it. You can use furniture, paintings, and other items to decorate your house.
     - After you have decorated your house, you need to move in. You can do this by placing a bed in your house.
     - After you have moved in, you need to enjoy your new home.
+
+task2:
+  name: David-Creative-331
+  prompts:
+    - The first thing you need to do is find a tree. You can do this by exploring your world or by using a seed that is known to have tall trees.
+    - Once you have found a tree, you need to measure its height. This can be done by using a ruler or by measuring the block height of the tree.
+    - After you have measured the height of the tree, you need to find a spot to build your house. The best spot to build your house is on top of the tree.
+    - Once you have found a spot to build your house, you need to start building it. You can use any type of block to build your house.
+    - After you have built your house, you need to decorate it. You can use furniture, paintings, and other items to decorate your house.
+    - After you have decorated your house, you need to move in. You can do this by placing a bed in your house.
+    - After you have moved in, you need to enjoy your new home.
+
+task3:
+  name: GPT-create-cookie
+  prompts:
+    - Find a tree.
+    - Cut the tree down with an axe to obtain wood.
+    - Craft a crafting table with the wood.
+    - Place the crafting table down and open it.
+    - Find the cookie recipe in the crafting menu and craft the cookies.
+
+task4:
+  name: David-create-cookie
+  prompts:
+    - Find a tree.
+    - Cut the tree down with an axe to obtain wood.
+    - Craft a crafting table with the wood.
+    - Place the crafting table down and open it.
+    - Find the cookie recipe in the crafting menu and craft the cookies.
+
+task5:
+  name: GPT-creative-118
+  prompts:
+    - Find a suitable location in your house for the trap. A small room or closet would be ideal.
+    - Place a pressure plate or tripwire at the entrance to the room.
+    - Place a few TNT blocks inside the room.
+    - When the skeleton enters the room, it will trigger the pressure plate or tripwire, causing the TNT to explode and kill the skeleton.
+
+task6:
+  name: David-creative-118
+  prompts:
+    - Find a suitable location in your house for the trap. A small room or closet would be ideal.
+    - Place a pressure plate or tripwire at the entrance to the room.
+    - Place a few TNT blocks inside the room.
+    - When the skeleton enters the room, it will trigger the pressure plate or tripwire, causing the TNT to explode and kill the skeleton.
+
+task7:
+  name: David-creative-481
+  prompts:
+    - Find the tallest mountain in Minecraft. This might take some time, depending on the size of your world.
+    - Once you've found the tallest mountain, climb to the top.
+    - When you're at the top, find a suitable place to jump off. Make sure there's nothing in the way that could block your jump, and that the area below is clear.
+    - When you're ready, take a running jump off the edge of the mountain.
+    - As you're falling, deploy your parachute.
+    - Enjoy the view as you float down to the ground!
+
+task8:
+  name: GPT-creative-481
+  prompts:
+      - Find the tallest mountain in Minecraft. This might take some time, depending on the size of your world.
+      - Once you've found the tallest mountain, climb to the top.
+      - When you're at the top, find a suitable place to jump off. Make sure there's nothing in the way that could block your jump, and that the area below is clear.
+      - When you're ready, take a running jump off the edge of the mountain.
+      - As you're falling, deploy your parachute.
+      - Enjoy the view as you float down to the ground!
+
+task9:
+  name: David-golden-pickaxe
+  prompts:
+     - Find a place with a lot of trees.
+     - Cut down the trees and gather the wood.
+     - Find a place with a lot of stone.
+     - Mine the stone and gather the cobblestone.
+     - Find a place with a lot of iron.
+     - Mine the iron and gather the iron ingots.
+     - Find a place with a lot of gold.
+     - Mine the gold and gather the gold ingots.
+     - Craft a golden pickaxe.
+
+task10:
+  name: GPT-golden-pickaxe
+  prompts:
+       - Find a place with a lot of trees.
+       - Cut down the trees and gather the wood.
+       - Find a place with a lot of stone.
+       - Mine the stone and gather the cobblestone.
+       - Find a place with a lot of iron.
+       - Mine the iron and gather the iron ingots.
+       - Find a place with a lot of gold.
+       - Mine the gold and gather the gold ingots.
+       - Craft a golden pickaxe.
+
+task11:
+  name: David-Sailboat-with-sheep
+  prompts:
+    - Find a boat.
+    - Place the sheep in the boat.
+    - Right-click on the boat with an empty hand to get in.
+    - Use the WASD keys to move the boat. The sheep should stay in the boat.
+
+task12:
+  name: GPT-Sailboat-with-sheep
+  prompts:
+      - Find a boat.
+      - Place the sheep in the boat.
+      - Right-click on the boat with an empty hand to get in.
+      - Use the WASD keys to move the boat. The sheep should stay in the boat.
+
+task13:
+  name: David-Shear-sheep
+  prompts:
+    - Find a sheep.
+    - Right-click on the sheep with your hand to interact with it.
+    - When the sheep''s health bar appears, wait for it to turn white.
+    - Left-click on the sheep to shear it.
+    - Collect the wool that appears.
+
+task14:
+  name: GPT-Shear-sheep
+  prompts:
+      - Find a sheep.
+      - Right-click on the sheep with your hand to interact with it.
+      - When the sheep''s health bar appears, wait for it to turn white.
+      - Left-click on the sheep to shear it.
+      - Collect the wool that appears.
+
+task15:
+  name: David-trap-zombie
+  prompts:
+    - Find a zombie.
+    - Lure the zombie into a house with food.
+    - Close the door to the house so the zombie cannot escape.
+    - Enjoy your new pet zombie!
+
+task16:
+  name: GPT-trap-zombie
+  prompts:
+      - Find a zombie.
+      - Lure the zombie into a house with food.
+      - Close the door to the house so the zombie cannot escape.
+      - Enjoy your new pet zombie!
