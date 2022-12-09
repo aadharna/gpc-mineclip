@@ -76,15 +76,15 @@ def preprocess_obs(obs, prev_action, device):
     
     B = 1
     
-    compass = np.concatenate(
-        torch.sin(obs["location_stats"]["yaw"]), 
-        torch.sin(obs["location_stats"]["pitch"]),
-        torch.cos(obs["location_stats"]["yaw"]),
-        torch.cos(obs["location_stats"]["pitch"])
-        )
+    compass = torch.cat((
+        torch.sin(torch.tensor(obs["location_stats"]["yaw"])), 
+        torch.sin(torch.tensor(obs["location_stats"]["pitch"])),
+        torch.cos(torch.tensor(obs["location_stats"]["yaw"])),
+        torch.cos(torch.tensor(obs["location_stats"]["pitch"]))
+    ))
     gps = obs["location_stats"]["pos"] #(3, )
-    voxels = obs["voxels"]['block_name'] #(3, 3, 3)
-    biome_id = obs["location_state"]["biome_id"] #(1, )
+    voxels = obs["voxels"]['block_meta'] #(3, 3, 3)
+    biome_id = obs["location_stats"]["biome_id"] #(1, )
     prompt = None # TODO: need wrapper to return the current prompt (subtask)
     
     obs = {
@@ -92,10 +92,10 @@ def preprocess_obs(obs, prev_action, device):
         "gps": torch.tensor(gps.reshape(B, 3), device=device),
         "voxels": torch.tensor(
             voxels.reshape(B, 3 * 3 * 3), dtype=torch.long, device=device
-        ),
+        ), # FIXME: cannot reshape array of size 8 into shape (1,)
         "biome_id": torch.tensor(
             biome_id.reshape(B, ), dtype=torch.long, device=device
-        ),
+        ), 
         # FIXME: 89 dim?
         # "prev_action": torch.randint(
         #     low=0, high=88, size=(B,), dtype=torch.long, device=device
