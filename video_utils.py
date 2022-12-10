@@ -53,9 +53,10 @@ def example_read_video(video_object, start=0, end=None):
 
     return video_frames, video_pts, video_object.get_metadata()
 
-def init_wandb(task_id,sample_rate=16):
+def init_wandb(task_id, weight_type, sample_rate=16):
     wandb.init(project="curriculum-from-recordings", entity="gcapable")
     wandb.config = {
     "task": task_id,
-    "sample_rate": sample_rate
+    "sample_rate": sample_rate,
+    "weight_type": weight_type
     }
