@@ -16,6 +16,7 @@ if __name__ == '__main__':
     # get the task name from the command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default='mineclip')
+    parser.add_argument('--weight_type', type=str, default='attn')
     args = parser.parse_args()
     TASK = args.task
 
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     PATH = os.path.join(os.getcwd(), 'recordings', '{}.mp4'.format(conf['name']))
     prompts = conf['prompts']
 
-    init_wandb(task_id=conf['name'])
+    init_wandb(task_id=conf['name'], weight_type=args.weight_type)
     prompt_ids = ["Sub-Task {}".format(x+1) for x in range(len(prompts))]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -48,5 +49,6 @@ if __name__ == '__main__':
         data = torch.unsqueeze(data, dim=0).to(device)
         with torch.no_grad():
             reward, _ = model(data, text_tokens=prompt_feats, is_video_features=False)
+            reward /= torch.exp(model.clip_model.logit_scale)
         log_data = dict(zip(prompt_ids, reward[0].cpu().numpy()))
         wandb.log(log_data)
