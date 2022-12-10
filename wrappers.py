@@ -5,7 +5,7 @@ from mineclip import MineCLIP
 import torchvision.transforms as T
 
 class MineClipWrapper(gym.Wrapper):
-    def __init__(self, env,prompts):
+    def __init__(self, env, prompts, scaled_reward=False):
         super().__init__(env)
         self.env = env
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -16,7 +16,8 @@ class MineClipWrapper(gym.Wrapper):
         ckpt = cfg.pop("ckpt")
         OmegaConf.set_struct(cfg, True)
         self.model = MineCLIP(**cfg).to(self.device)
-        self.model.load_ckpt(ckpt.path,strict=True)
+        self.model.load_ckpt(ckpt.path, strict=True)
+        self.scalar = torch.exp(self.model.clip_model.logit_scale) if scaled_reward else 1
         self.model.eval()
 
         # Calculate Initial features for prompts and dummy frames 
@@ -42,6 +43,9 @@ class MineClipWrapper(gym.Wrapper):
             video_feats = self.model.forward_video_features(self.image_feats)
             prompt = torch.unsqueeze(self.prompt_feats[self.pi], dim=0)
             reward, _ = self.model(video_feats, text_tokens=prompt, is_video_features=True)
+            # undo the reward scaling inherent in the clip model
+            # this returns the reward to [-1, 1] range
+            reward /= self.scalar
             delta_reward = reward - self.previous_reward
             self.previous_reward = reward
         return next_state, delta_reward.item(), done, info
