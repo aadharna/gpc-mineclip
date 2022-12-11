@@ -119,7 +119,7 @@ def transform_action(action):
     return action
         
 
-@hydra.main(config_name="a2c_ppo_conf", config_path=".", version_base="1.1")
+@hydra.main(config_name="ppo_conf", config_path=".", version_base="1.1")
 def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -153,7 +153,7 @@ def main(cfg):
     
     # Set up storage
     # TODO: see if we can use tensor here with Batch
-    obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs, 89), dtype=object)
+    obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs, ), dtype=object)
     # FIXME: check dim of transformed action
     actions = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 89)).to(device)
     logprobs = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
