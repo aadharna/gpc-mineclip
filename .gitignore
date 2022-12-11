@@ -134,3 +134,6 @@ logs
 
 # weights
 *.pth
+
+# Logs
+wandb/
