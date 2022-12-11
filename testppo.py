@@ -7,9 +7,9 @@ import numpy as np
 import minedojo
 from wrappers import MineClipWrapper
 
-from mineclip.mineagent import features as F
-from mineclip import SimpleFeatureFusion, MineAgent, MultiCategoricalActor
-from mineclip.mineagent.batch import Batch
+from mineagent import MultiCategoricalActor, SimpleFeatureFusion
+from mineagent import features as F
+from mineagent.batch import Batch
 
 import hydra
 import wandb
@@ -68,6 +68,10 @@ class ActorCritic(nn.Module):
             # action = probs.mode() if deterministic
         return action, probs.log_prob(action), probs.entropy(), self.critic(obs)
     
+def convert_action_space(action):
+    """
+    Convert raw action 
+    """
     
 def preprocess_obs(obs, info, prev_action, device):
     """
@@ -86,21 +90,19 @@ def preprocess_obs(obs, info, prev_action, device):
     voxels = obs["voxels"]['block_meta'] #(3, 3, 3)
     biome_id = obs["location_stats"]["biome_id"] #(1, )
     prompt = info["prompt"]
+    prev_action = prev_action
+    import ipdb; ipdb.set_trace()
     
     obs = {
         "compass": torch.tensor(compass.reshape(B, 4), device=device),
         "gps": torch.tensor(gps.reshape(B, 3), device=device),
         "voxels": torch.tensor(
             voxels.reshape(B, 3 * 3 * 3), dtype=torch.long, device=device
-        ), # FIXME: cannot reshape array of size 8 into shape (1,)
+        ), 
         "biome_id": torch.tensor(
             biome_id.reshape(B, ), dtype=torch.long, device=device
         ), 
-        # FIXME: implement separate feature network for prev_action 
-        "prev_action": torch.randint(
-            low=0, high=88, size=(B,), dtype=torch.long, device=device
-        ),
-        "prev_action": torch.tensor(prev_action.reshape(B, ), device=device), 
+        "prev_action": torch.tensor(prev_action.reshape(B, 6), device=device), 
         "prompt": torch.tensor(prompt.reshape(B, 512), device=device), 
     }
     
