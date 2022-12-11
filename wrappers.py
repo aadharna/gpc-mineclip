@@ -48,6 +48,7 @@ class MineClipWrapper(gym.Wrapper):
             reward /= self.scalar
             delta_reward = reward - self.previous_reward
             self.previous_reward = reward
+        info['prompt'] = self.prompt_feats[self.pi]
         return next_state, delta_reward.item(), done, info
 
     def change_prompt(self, index=None):
