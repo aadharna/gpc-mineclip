@@ -9,7 +9,8 @@ from wrappers import MineClipWrapper
 
 from mineagent import MultiCategoricalActor, SimpleFeatureFusion
 from mineagent import features as F
-from mineagent.batch import Batch
+
+from tianshou.data import Batch, ReplayBuffer
 
 import hydra
 import wandb
@@ -155,7 +156,8 @@ def main(cfg):
     
     # Set up storage
     # TODO: see if we can use tensor here with Batch
-    obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs, ), dtype=object)
+    obs_buf = ReplayBuffer(size=cfg.experiment.rollout_length)
+    # obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs, ), dtype=object)
     # FIXME: check dim of transformed action
     actions = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 89)).to(device)
     logprobs = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
@@ -181,7 +183,8 @@ def main(cfg):
         
         for step in range(0, cfg.experiment.rollout_length):
             timestep += 1 * cfg.experiment.n_envs
-            obs[step] = next_obs
+            # obs[step] = next_obs
+            obs_buf.add(next_obs)
             dones[step] = next_done
             
             # Collect rollout
@@ -193,7 +196,8 @@ def main(cfg):
             actions[step] = action
             logprobs[step] = logprob
             
-            next_obs, reward, done, info = env.step(transform_action(action))
+            # next_obs, reward, done, info = env.step(transform_action(action))
+            next_obs, reward, done, info = env.step(action) # FIXME
             next_obs = preprocess_obs(next_obs, info, action, device)
             rewards[step] = torch.tensor(reward, device=device)
             next_obs, next_done = next_obs, torch.Tensor(done).to(device)
@@ -217,7 +221,7 @@ def main(cfg):
                 advantages[t] = lastgaelam = delta + cfg.experiment.gamma * cfg.experiment.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
         
-        b_obs = obs
+        b_obs = obs_buf.obs
         if DEBUG: 
             import ipdb; ipdb.set_trace()
         b_actions = actions.reshape(-1)
@@ -234,7 +238,6 @@ def main(cfg):
             for start in range(0, cfg.experiment.batch_size, minibatch_size):
                 end = start + minibatch_size
                 mb_inds = b_inds[start:end]
-                # FIXME: b_obs is numpy array...
                 _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions)
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
