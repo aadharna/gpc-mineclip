@@ -14,7 +14,7 @@ from mineclip.mineagent.batch import Batch
 import hydra
 import wandb
 
-DEBUG = False
+DEBUG = True
 
 class Critic(nn.Module):
     def __init__(self, feature_net, **kwargs):
@@ -69,7 +69,7 @@ class ActorCritic(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(obs)
     
     
-def preprocess_obs(obs, prev_action, device):
+def preprocess_obs(obs, info, prev_action, device):
     """
     Convert raw env obs to agent obs
     """
@@ -85,7 +85,7 @@ def preprocess_obs(obs, prev_action, device):
     gps = obs["location_stats"]["pos"] #(3, )
     voxels = obs["voxels"]['block_meta'] #(3, 3, 3)
     biome_id = obs["location_stats"]["biome_id"] #(1, )
-    prompt = None # TODO: need wrapper to return the current prompt (subtask)
+    prompt = info["prompt"]
     
     obs = {
         "compass": torch.tensor(compass.reshape(B, 4), device=device),
@@ -96,12 +96,12 @@ def preprocess_obs(obs, prev_action, device):
         "biome_id": torch.tensor(
             biome_id.reshape(B, ), dtype=torch.long, device=device
         ), 
-        # FIXME: 89 dim?
-        # "prev_action": torch.randint(
-        #     low=0, high=88, size=(B,), dtype=torch.long, device=device
-        # ),
+        # FIXME: implement separate feature network for prev_action 
+        "prev_action": torch.randint(
+            low=0, high=88, size=(B,), dtype=torch.long, device=device
+        ),
         "prev_action": torch.tensor(prev_action.reshape(B, ), device=device), 
-        "prompt": torch.rand((B, 512), device=device), 
+        "prompt": torch.tensor(prompt.reshape(B, 512), device=device), 
     }
     
     return Batch(obs=obs)
@@ -166,9 +166,9 @@ def main(cfg):
     env.reset()
     action = env.action_space.no_op()
     next_obs, reward, next_done, info = env.step(env.action_space.no_op())
+    next_obs = preprocess_obs(next_obs, info, action, device)
     if DEBUG: 
         import ipdb; ipdb.set_trace()
-    next_obs = preprocess_obs(next_obs, action, device)
     num_updates = cfg.experiment.total_timesteps // cfg.experiment.batch_size
     
     for i in range(num_updates):
@@ -192,9 +192,9 @@ def main(cfg):
             logprobs[step] = logprob
             
             next_obs, reward, done, info = env.step(transform_action(action))
-            next_obs = preprocess_obs(next_obs, action, device)
+            next_obs = preprocess_obs(next_obs, info, action, device)
             rewards[step] = torch.tensor(reward, device=device)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
+            next_obs, next_done = next_obs, torch.Tensor(done).to(device)
             
             if timestep % cfg.experiment.log_interval == 0:
                 wandb.log({"reward": reward})
