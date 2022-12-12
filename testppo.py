@@ -1,5 +1,4 @@
 import gym
-from stable_baselines3 import PPO
 import torch
 import torch.nn as nn
 import numpy as np
@@ -9,8 +8,8 @@ from wrappers import MineClipWrapper
 
 from mineagent import MultiCategoricalActor, SimpleFeatureFusion
 from mineagent import features as F
-
-from tianshou.data import Batch, ReplayBuffer
+# from mineagent.batch import Batch
+from tianshou.data import Batch
 
 import hydra
 import wandb
@@ -209,7 +208,8 @@ def main(cfg):
             # next_obs, next_done = next_obs, torch.Tensor(done).to(device)
             
             if timestep % cfg.experiment.log_interval == 0:
-                wandb.log({"reward": reward})
+                wandb.log({"reward": reward}, step=timestep)
+                wandb.log({"prompt": env.prompts[env.pi]}, step=timestep)
                 
         # Compute returns
         with torch.no_grad():
@@ -295,16 +295,16 @@ def main(cfg):
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
         
-        # Log to wandb        
-        wandb.log("learnging_rate", optimizer.param_groups[0]['lr'], step=timestep)
-        wandb.log("loss.policy_loss", pg_loss.item(), step=timestep)
-        wandb.log("loss.value_loss", v_loss.item(), step=timestep)
-        wandb.log("loss.entropy", entropy_loss.item(), step=timestep)
-        wandb.log("loss.approx_kl", approx_kl.item(), step=timestep)
-        wandb.log("loss.old_approx_kl", old_approx_kl.item(), step=timestep)
-        wandb.log("loss.total_loss", loss.item(), step=timestep)
-        wandb.log("loss.clipfrac", np.mean(clipfracs), step=timestep)
-        wandb.log("loss.explained_var", explained_var, step=timestep)
+        # Log to wandb  
+        wandb.log({"learnging_rate": optimizer.param_groups[0]['lr']}, step=timestep)
+        wandb.log({"loss.policy_loss": pg_loss.item()}, step=timestep)
+        wandb.log({"loss.value_loss": v_loss.item()}, step=timestep)
+        wandb.log({"loss.entropy": entropy_loss.item()}, step=timestep)
+        wandb.log({"loss.approx_kl": approx_kl.item()}, step=timestep)
+        wandb.log({"loss.old_approx_kl": old_approx_kl.item()}, step=timestep)
+        wandb.log({"loss.total_loss": loss.item()}, step=timestep)
+        wandb.log({"loss.clipfrac": np.mean(clipfracs)}, step=timestep)
+        wandb.log({"loss.explained_var": explained_var}, step=timestep)
         
     env.close()
     wandb.finish()
