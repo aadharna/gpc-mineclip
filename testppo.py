@@ -13,7 +13,7 @@ from tianshou.data import Batch
 
 import hydra
 import wandb
-# import moviepy, imageio # Not used in script but used in background by wandb for logging videos
+# import moviepy, imageio # Not used in script but used in background by wandb for logging videos, do pip install moviepy imageio
 
 DEBUG = False
 
@@ -92,6 +92,7 @@ def preprocess_obs(obs, info, prev_action, device):
     voxels = obs["voxels"]['block_meta'] #(3, 3, 3)
     biome_id = obs["location_stats"]["biome_id"] #(1, )
     prompt = info["prompt"]
+    image = info["img_feats"]
     prev_action = prev_action
     if DEBUG:
         import ipdb; ipdb.set_trace()
@@ -109,7 +110,8 @@ def preprocess_obs(obs, info, prev_action, device):
         # "prev_action": torch.tensor(prev_action.reshape(B, ), device=device), 
         "prev_action": torch.randint(low=0, high=88, size=(B, ), device=device),
         # "prompt": torch.tensor(prompt.reshape(B, 512), device=device), 
-        "prompt": prompt.clone().detach().reshape(B, 512)
+        "prompt": prompt.clone().detach().reshape(B, 512),
+        "image": image.clone().detach().reshape(B, 512)
     }
     
     return Batch(obs=obs)
