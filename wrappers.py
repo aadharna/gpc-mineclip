@@ -5,7 +5,7 @@ from mineclip import MineCLIP
 import torchvision.transforms as T
 
 class MineClipWrapper(gym.Wrapper):
-    def __init__(self, env, prompts, scaled_reward=False):
+    def __init__(self, env, prompts, scaled_reward=True):
         super().__init__(env)
         self.env = env
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,15 +47,15 @@ class MineClipWrapper(gym.Wrapper):
             # undo the reward scaling inherent in the clip model
             # this returns the reward to [-1, 1] range
             reward /= self.scalar
-            delta_reward = reward - self.previous_reward
+            #delta_reward = reward - self.previous_reward
             self.previous_reward = reward
         info['prompt'] = self.prompt_feats[self.pi]
         info['img_feats'] = torch.reshape(img_feats, prompt.shape)
-        return next_state, delta_reward.item(), done, info
+        return next_state, reward.item(), done, info
 
     def change_prompt(self, index=None):
         if index is None:
-            self.pi += 1
+            self.pi = min(len(self.prompt_feats) - 1, self.pi + 1)
         else:
             self.pi = index
 
@@ -83,13 +83,11 @@ class MonitorAndSwitchRewardFn(gym.Wrapper):
 
         if self.running_average >= self.subtask_solved_threshold:
             self.env.change_prompt()
-            if self.env.pi == len(self.env.prompt_feats):
-                done = True
 
         return next_state, reward, done, info
 
-    def reset(self):
-        return self.env.reset()
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
 
     def get_running_average(self):
         return self.running_average
