@@ -50,6 +50,7 @@ class MineClipWrapper(gym.Wrapper):
             delta_reward = reward - self.previous_reward
             self.previous_reward = reward
         info['prompt'] = self.prompt_feats[self.pi]
+        info['img_feats'] = torch.reshape(img_feats, prompt.shape)
         return next_state, delta_reward.item(), done, info
 
     def change_prompt(self, index=None):
