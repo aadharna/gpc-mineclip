@@ -25,6 +25,9 @@ feature_net_kwargs:
   prompt:
     cls: PromptEmbFeat
     output_dim: 512
+  image:
+    cls: DummyImgFeat
+    output_dim: 512
 
 feature_fusion:
   output_dim: 512
@@ -64,6 +67,8 @@ experiment:
   value_loss_coef: 0.5
   max_grad_norm: 0.5
   target_kl: None
+  gif_interval: 100 # Episodes
+  obs_save_threshold: 0.3
 
 hydra:
   job:
