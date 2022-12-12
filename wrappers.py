@@ -3,6 +3,7 @@ from omegaconf import OmegaConf
 import torch
 from mineclip import MineCLIP
 import torchvision.transforms as T
+import numpy as np
 
 class MineClipWrapper(gym.Wrapper):
     def __init__(self, env, prompts, scaled_reward=False):
@@ -79,8 +80,9 @@ class MonitorAndSwitchRewardFn(gym.Wrapper):
     def step(self, action):
         next_state, reward, done, info = self.env.step(action)
         # sets the self.running_average variable
+        if reward > 10: 
+            return next_state, reward, done, info
         self.running_average = self.running_average_class.process(reward)
-
         if self.running_average >= self.subtask_solved_threshold:
             self.env.change_prompt()
             if self.env.pi == len(self.env.prompt_feats):
@@ -99,7 +101,7 @@ class MonitorAndSwitchRewardFn(gym.Wrapper):
 class StreamingMovingAverage:
     def __init__(self, window_size):
         self.window_size = window_size
-        self.values = []
+        self.values = [-666. for i in range(window_size)]
         self.sum = 0
 
     def process(self, value):

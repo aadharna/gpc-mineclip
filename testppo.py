@@ -4,7 +4,7 @@ import torch.nn as nn
 import numpy as np
 
 import minedojo
-from wrappers import MineClipWrapper
+from wrappers import MineClipWrapper, MonitorAndSwitchRewardFn
 
 from mineagent import MultiCategoricalActor, SimpleFeatureFusion
 from mineagent import features as F
@@ -94,6 +94,7 @@ def preprocess_obs(obs, info, prev_action, device):
     prompt = info["prompt"]
     image = info["img_feats"]
     prev_action = prev_action
+    action_mask = obs["masks"]["action_type"]
     if DEBUG:
         import ipdb; ipdb.set_trace()
     
@@ -114,26 +115,31 @@ def preprocess_obs(obs, info, prev_action, device):
         "image": image.clone().detach().reshape(B, 512)
     }
     
-    return Batch(obs=obs)
+    return Batch(obs=obs), action_mask
     
-def transform_action(action):
+def transform_action(action, action_mask):
     """
     Map agent action to env action.
     """
     assert action.ndim == 2
     action = action[0]
     action = action.cpu().numpy()
+    # action = np.dot(action, action_mask)
     if action[-1] != 0 or action[-1] != 1 or action[-1] != 3:
         action[-1] = 0
     action = np.concatenate([action, np.array([0, 0])])
     return action
         
 
-@hydra.main(config_name="ppo_conf", config_path=".", version_base="1.1")
+@hydra.main(config_name="ppo_conf_sheep", config_path=".", version_base="1.1")
 def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     cfg.experiment.batch_size = cfg.experiment.n_envs * cfg.experiment.rollout_length
+    prompts = ["Find a sheep",
+            "Right click on the sheep with your hand to interact with it",
+            "When the sheeps health bar appears, wait for it to turn white",
+            "Left click on the sheep to shear it", "Collect the wool that appears"]
     
     run = wandb.init(
         project=cfg.experiment.wandb_project_name, 
@@ -146,16 +152,16 @@ def main(cfg):
     
     # Set up the environment TODO: vectorize to have n_envs > 1
     env = minedojo.make(
-        task_id="combat_spider_plains_leather_armors_diamond_sword_shield",
+        task_id=cfg.env.task_id,
         image_size=(160, 256),
         world_seed=123,
         seed=42,
     )
-    prompts = [
-        "find spider",
-        "kill spider",
-    ]
-    env = MineClipWrapper(env,prompts)
+    # prompts = cfg.env.prompts
+    # import ipdb; ipdb.set_trace()
+
+    # env = MonitorAndSwitchRewardFn(MineClipWrapper(env, prompts), window_size=10)
+    env = MineClipWrapper(env, prompts)
     
     # Set up the agent
     agent = ActorCritic(cfg, device)
@@ -177,7 +183,7 @@ def main(cfg):
     env.reset()
     action = env.action_space.no_op()
     next_obs, reward, next_done, info = env.step(env.action_space.no_op())
-    next_obs = preprocess_obs(next_obs, info, action, device)
+    next_obs, action_mask = preprocess_obs(next_obs, info, action, device)
     if DEBUG: 
         import ipdb; ipdb.set_trace()
     num_updates = int(cfg.experiment.total_timesteps // cfg.experiment.batch_size)
@@ -209,25 +215,30 @@ def main(cfg):
             actions[step] = action
             logprobs[step] = logprob
             
-            next_obs, reward, done, info = env.step(transform_action(action))
+            next_obs, reward, done, info = env.step(transform_action(action, action_mask))
             if SAVE_GIF:
                 frame_buffer.append(next_obs["rgb"])
                 
             if timestep % cfg.experiment.log_interval == 0:
                 wandb.log({"reward": reward}, step=timestep)
                 wandb.log({"prompt": env.prompts[env.pi]}, step=timestep)
+                wandb.log({"done": done}, step=timestep)
                 if abs(reward) > cfg.experiment.obs_save_threshold:
-                    images = wandb.Image(np.transpose(next_obs["rgb"], (1, 2, 0)), caption=f"reward spike: {reward}")
+                    images = wandb.Image(np.transpose(next_obs["rgb"], (1, 2, 0)), caption=f"reward spike: {env.prompts[env.pi]}: {reward}")
                     wandb.log({"examples": images})
                               
-            next_obs = preprocess_obs(next_obs, info, action, device)
+            next_obs, action_mask = preprocess_obs(next_obs, info, action, device)
             rewards[step] = torch.tensor(reward, device=device)
+            
+            if done: 
+                print("I'm a free elf!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                break
         
         if SAVE_GIF:
             # wandb.log(
             #     {f"rollout_gif": wandb.Video(np.transpose(np.array(frame_buffer), (0, 2, 3, 1)), fps=30, format="gif")},
             #     step=timestep)
-            wandb.log({"video": wandb.Video(np.array(frame_buffer), fps=30)}, step=timestep)
+            wandb.log({"video": wandb.Video(np.array(frame_buffer), fps=5)}, step=timestep)
             
         # Compute returns
         with torch.no_grad():

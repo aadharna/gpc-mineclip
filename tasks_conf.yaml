@@ -30,7 +30,6 @@ task3:
     - Cut the tree down with an axe to obtain wood.
     - Craft a crafting table with the wood.
     - Place the crafting table down and open it.
-    - Find the cookie recipe in the crafting menu and craft the cookies.
 
 task4:
   name: David-create-cookie
