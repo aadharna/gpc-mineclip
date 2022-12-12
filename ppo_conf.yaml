@@ -1,0 +1,73 @@
+feature_net_kwargs:
+  compass:
+    cls: CompassMLP
+    input_dim: 4 
+    hidden_dim: 128
+    output_dim: 128
+    hidden_depth: 2
+  gps:
+    cls: GPSMLP
+    hidden_dim: 128
+    output_dim: 128
+    hidden_depth: 2
+  voxels:
+    cls: FlattenedVoxelBlockEncoder
+    embed_dim: 8
+    hidden_dim: 128
+    output_dim: 128
+    hidden_depth: 2
+  biome_id:
+    cls: BiomeIDEmb
+    embed_dim: 8
+  prev_action:
+    cls: PrevActionEmb
+    embed_dim: 8
+  prompt:
+    cls: PromptEmbFeat
+    output_dim: 512
+
+feature_fusion:
+  output_dim: 512
+  hidden_depth: 0
+
+actor:
+  hidden_dim: 256
+  hidden_depth: 3
+
+critic:
+  hidden_dim: 64
+  hidden_depth: 1
+
+experiment:
+  wandb_project_name: "testPPO"
+  seed: 42
+  total_timesteps: 100000000
+  learning_rate: 1e-5
+  n_envs: 1
+  batch_size: 
+  rollout_length: 1000
+  anneal_lr: True # Toggle learning rate annealing for policy and value networks
+  log_interval: 16
+  save_interval: 64
+  gamma: 0.99 
+  gae_lambda: 0.95
+  clip: 0.2
+  eps: 0.2
+  ppo_epochs: 4
+  # action smoothing?
+  n_minibatches: 1 # < n_envs
+  n_train_epochs: 1 # number of training epochs per update
+  normalize_advantage: True
+  clip_value_loss: True
+  clip_coef: 0.2 # Surrogate clipping coefficient
+  entropy_coef: 0.01
+  value_loss_coef: 0.5
+  max_grad_norm: 0.5
+  target_kl: None
+
+hydra:
+  job:
+    chdir: true
+  run:
+    dir: .
+  output_subdir: null

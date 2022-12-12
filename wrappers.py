@@ -30,6 +30,7 @@ class MineClipWrapper(gym.Wrapper):
         #self.transform = T.Resize((160,256)) # Transformation to downsample image
         self.previous_reward = 0
         self.pi = 0
+        self.prompts = prompts
         
     def step(self, action):
         next_state, _, done, info = self.env.step(action)
