@@ -13,6 +13,7 @@ from tianshou.data import Batch
 
 import hydra
 import wandb
+# import moviepy, imageio # Not used in script but used in background by wandb for logging videos
 
 DEBUG = False
 
@@ -184,6 +185,12 @@ def main(cfg):
             frac = 1.0 - (i - 1.0) / num_updates
             lrnow = frac * cfg.experiment.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
+            
+        frame_buffer = []
+        SAVE_GIF = num_updates % cfg.experiment.gif_interval == 0
+        if SAVE_GIF:
+            # initialize image buffer for gif
+            frame_buffer = []
         
         for step in range(0, cfg.experiment.rollout_length):
             timestep += 1 * cfg.experiment.n_envs
@@ -201,16 +208,25 @@ def main(cfg):
             logprobs[step] = logprob
             
             next_obs, reward, done, info = env.step(transform_action(action))
-            # import ipdb; ipdb.set_trace()
-            # next_obs, reward, done, info = env.step(action) # FIXME
-            next_obs = preprocess_obs(next_obs, info, action, device)
-            rewards[step] = torch.tensor(reward, device=device)
-            # next_obs, next_done = next_obs, torch.Tensor(done).to(device)
-            
+            if SAVE_GIF:
+                frame_buffer.append(next_obs["rgb"])
+                
             if timestep % cfg.experiment.log_interval == 0:
                 wandb.log({"reward": reward}, step=timestep)
                 wandb.log({"prompt": env.prompts[env.pi]}, step=timestep)
-                
+                if abs(reward) > cfg.experiment.obs_save_threshold:
+                    images = wandb.Image(np.transpose(next_obs["rgb"], (1, 2, 0)), caption=f"reward spike: {reward}")
+                    wandb.log({"examples": images})
+                              
+            next_obs = preprocess_obs(next_obs, info, action, device)
+            rewards[step] = torch.tensor(reward, device=device)
+        
+        if SAVE_GIF:
+            # wandb.log(
+            #     {f"rollout_gif": wandb.Video(np.transpose(np.array(frame_buffer), (0, 2, 3, 1)), fps=30, format="gif")},
+            #     step=timestep)
+            wandb.log({"video": wandb.Video(np.array(frame_buffer), fps=30)}, step=timestep)
+            
         # Compute returns
         with torch.no_grad():
             next_value = agent.get_value(next_obs)
