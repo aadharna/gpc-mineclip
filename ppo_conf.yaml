@@ -41,7 +41,7 @@ critic:
 experiment:
   wandb_project_name: "testPPO"
   seed: 42
-  total_timesteps: 1e8
+  total_timesteps: 100000000
   learning_rate: 1e-5
   n_envs: 1
   batch_size: 
@@ -55,7 +55,7 @@ experiment:
   eps: 0.2
   ppo_epochs: 4
   # action smoothing?
-  n_minibatch: 1 # < n_envs
+  n_minibatches: 1 # < n_envs
   n_train_epochs: 1 # number of training epochs per update
   normalize_advantage: True
   clip_value_loss: True

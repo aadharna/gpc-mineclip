@@ -12,8 +12,8 @@ class PrevActionEmb(nn.Module):
         device: torch.device,
     ):
         super().__init__()
-        # self._embed = nn.Embedding(ACTION_DIM, embed_dim)
-        self._embed = nn.Linear(8, embed_dim)
+        self._embed = nn.Embedding(89, embed_dim)
+        # self._embed = nn.Linear(8, embed_dim)
         self._output_dim = embed_dim
         self._device = device
 

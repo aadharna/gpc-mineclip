@@ -40,6 +40,7 @@ class Categorical(torch.distributions.Categorical):
 
 class MultiCategorical(torch.distributions.Distribution):
     def __init__(self, logits, action_dims: list[int]):
+        # import ipdb; ipdb.set_trace()
         assert logits.dim() == 2, logits.shape
         super().__init__(batch_shape=logits[:1], validate_args=False)
         self._action_dims = tuple(action_dims)

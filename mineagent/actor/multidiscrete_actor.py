@@ -38,7 +38,7 @@ class MultiCategoricalActor(nn.Module):
         hidden = None
         x, _ = self.preprocess(x)
         return torch.cat([mlp(x) for mlp in self.mlps], dim=1), hidden
-
+    
     @property
     def dist_fn(self):
         return lambda x: MultiCategorical(logits=x, action_dims=self._action_dim)

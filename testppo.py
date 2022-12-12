@@ -15,7 +15,7 @@ from tianshou.data import Batch, ReplayBuffer
 import hydra
 import wandb
 
-DEBUG = True
+DEBUG = False
 
 class Critic(nn.Module):
     def __init__(self, feature_net, **kwargs):
@@ -31,7 +31,7 @@ class Critic(nn.Module):
         )
     
     def forward(self, obs):
-        x = self.feature_net(obs)
+        x, _ = self.feature_net(obs)
         return self.value_net(x)
         
 
@@ -58,16 +58,17 @@ class ActorCritic(nn.Module):
         self.critic = Critic(feature_net, **cfg.critic).to(device)
     
     def get_value(self, obs):
-        return self.critic(obs)
+        return self.critic(obs.obs)
         
-    def get_action_and_value(self, obs, action=None):
-        logits = self.actor(obs)
-        import ipdb; ipdb.set_trace()
-        probs = self.actor.dist_fn(logits=logits)
+    def get_action_and_value(self, obs, action=None, deterministic=False):
+        # import ipdb; ipdb.set_trace()
+        logits = self.actor(obs.obs)[0]
+        probs = self.actor.dist_fn(logits)
         if action == None:
             action = probs.sample()
-            # action = probs.mode() if deterministic
-        return action, probs.log_prob(action), probs.entropy(), self.critic(obs)
+        if deterministic:
+            action = probs.mode()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(obs.obs)
     
 def convert_action_space(action):
     """
@@ -92,10 +93,12 @@ def preprocess_obs(obs, info, prev_action, device):
     biome_id = obs["location_stats"]["biome_id"] #(1, )
     prompt = info["prompt"]
     prev_action = prev_action
-    import ipdb; ipdb.set_trace()
+    if DEBUG:
+        import ipdb; ipdb.set_trace()
     
     obs = {
-        "compass": torch.tensor(compass.reshape(B, 4), device=device),
+        # "compass": torch.tensor(compass.reshape(B, 4), device=device),
+        "compass": compass.clone().detach().reshape(B,  4),
         "gps": torch.tensor(gps.reshape(B, 3), device=device),
         "voxels": torch.tensor(
             voxels.reshape(B, 3 * 3 * 3), dtype=torch.long, device=device
@@ -103,8 +106,10 @@ def preprocess_obs(obs, info, prev_action, device):
         "biome_id": torch.tensor(
             biome_id.reshape(B, ), dtype=torch.long, device=device
         ), 
-        "prev_action": torch.tensor(prev_action.reshape(B, 6), device=device), 
-        "prompt": torch.tensor(prompt.reshape(B, 512), device=device), 
+        # "prev_action": torch.tensor(prev_action.reshape(B, ), device=device), 
+        "prev_action": torch.randint(low=0, high=88, size=(B, ), device=device),
+        # "prompt": torch.tensor(prompt.reshape(B, 512), device=device), 
+        "prompt": prompt.clone().detach().reshape(B, 512)
     }
     
     return Batch(obs=obs)
@@ -156,10 +161,10 @@ def main(cfg):
     
     # Set up storage
     # TODO: see if we can use tensor here with Batch
-    obs_buf = ReplayBuffer(size=cfg.experiment.rollout_length)
-    # obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs, ), dtype=object)
+    # obs_buf = ReplayBuffer(size=cfg.experiment.rollout_length)
+    obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs), dtype=object) # rollout_length x 1
     # FIXME: check dim of transformed action
-    actions = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 89)).to(device)
+    actions = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 6)).to(device)
     logprobs = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     rewards = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     dones = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
@@ -173,7 +178,7 @@ def main(cfg):
     next_obs = preprocess_obs(next_obs, info, action, device)
     if DEBUG: 
         import ipdb; ipdb.set_trace()
-    num_updates = cfg.experiment.total_timesteps // cfg.experiment.batch_size
+    num_updates = int(cfg.experiment.total_timesteps // cfg.experiment.batch_size)
     
     for i in range(num_updates):
         if cfg.experiment.anneal_lr:
@@ -184,34 +189,35 @@ def main(cfg):
         for step in range(0, cfg.experiment.rollout_length):
             timestep += 1 * cfg.experiment.n_envs
             # obs[step] = next_obs
-            obs_buf.add(next_obs)
+            obs[step]= (next_obs)
             dones[step] = next_done
             
             # Collect rollout
             with torch.no_grad(): 
-                if DEBUG:
-                    import ipdb; ipdb.set_trace()
+                # import ipdb; ipdb.set_trace()
                 action, logprob, ent, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
+            # import ipdb; ipdb.set_trace()
             actions[step] = action
             logprobs[step] = logprob
             
-            # next_obs, reward, done, info = env.step(transform_action(action))
-            next_obs, reward, done, info = env.step(action) # FIXME
+            next_obs, reward, done, info = env.step(transform_action(action))
+            # import ipdb; ipdb.set_trace()
+            # next_obs, reward, done, info = env.step(action) # FIXME
             next_obs = preprocess_obs(next_obs, info, action, device)
             rewards[step] = torch.tensor(reward, device=device)
-            next_obs, next_done = next_obs, torch.Tensor(done).to(device)
+            # next_obs, next_done = next_obs, torch.Tensor(done).to(device)
             
             if timestep % cfg.experiment.log_interval == 0:
                 wandb.log({"reward": reward})
                 
         # Compute returns
         with torch.no_grad():
-            next_value = agent.get_value(next_value)
-            advantages = torch.zero_like(rewards).to(device)
+            next_value = agent.get_value(next_obs)
+            advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
-            for t in reversed(range(cfg.experiment.num_steps)):
-                if t == cfg.experiment.num_steps - 1:
+            for t in reversed(range(cfg.experiment.rollout_length)):
+                if t == cfg.experiment.rollout_length - 1:
                     nextnonterminal = 1.0 - next_done
                     nextvalues = next_value
                 else:
@@ -221,10 +227,10 @@ def main(cfg):
                 advantages[t] = lastgaelam = delta + cfg.experiment.gamma * cfg.experiment.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
         
-        b_obs = obs_buf.obs
+        b_obs = obs.reshape(-1)
         if DEBUG: 
             import ipdb; ipdb.set_trace()
-        b_actions = actions.reshape(-1)
+        b_actions = actions.reshape(-1, 6)
         b_logprobs = logprobs.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
@@ -238,7 +244,7 @@ def main(cfg):
             for start in range(0, cfg.experiment.batch_size, minibatch_size):
                 end = start + minibatch_size
                 mb_inds = b_inds[start:end]
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions)
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(Batch(b_obs[mb_inds]), b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
                 
@@ -278,12 +284,12 @@ def main(cfg):
                 optimizer.zero_grad()
                 loss.backward()
                 # global gradient clipping
-                nn.utils.clip_grad.norm_(agent.parameters(), cfg.experiment.max_grad_norm)
+                nn.utils.clip_grad_norm_(agent.parameters(), cfg.experiment.max_grad_norm)
                 optimizer.step()
             
-            if cfg.experiment.target_kl is not None:
-                if approx_kl > cfg.experiment.target_kl:
-                    break
+            # if cfg.experiment.target_kl is not None:
+            #     if approx_kl > cfg.experiment.target_kl:
+            #         break
         
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
