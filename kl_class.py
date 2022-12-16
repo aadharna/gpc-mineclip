@@ -25,12 +25,10 @@ class ActionSmoothingLoss(nn.Module):
         W, A = previous_actions.shape
         if logits:
             for j in range(len(self.sub_actions)):
-                previous_actions[:, sum(self.sub_actions[:j]):
-                                    sum(self.sub_actions[:j+1])] = F.log_softmax(previous_actions[:, sum(self.sub_actions[:j]):
-                                                                                                     sum(self.sub_actions[:j+1])], dim=1)
-                current_action[sum(self.sub_actions[:j]):
-                               sum(self.sub_actions[:j+1])] = F.log_softmax(current_action[sum(self.sub_actions[:j]):
-                                                                                           sum(self.sub_actions[:j+1])], dim=0)
+                start = sum(self.sub_actions[:j])
+                stop = sum(self.sub_actions[:j+1])
+                previous_actions[:, start:stop] = F.log_softmax(previous_actions[:, start:stop], dim=1)
+                current_action[start:stop] = F.log_softmax(current_action[start:stop], dim=0)
 
         loss = 0
         for i in range(W):
