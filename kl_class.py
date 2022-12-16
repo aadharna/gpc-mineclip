@@ -20,7 +20,7 @@ class ActionSmoothingLoss(nn.Module):
             W: window size
             A: sum(self.action_space.nvec)
         """
-        current_action = torch.reshape(current_action, sum(self.sub_actions))
+        current_action = torch.reshape(current_action, (sum(self.sub_actions),))
         previous_actions = torch.reshape(previous_actions, (-1, sum(self.sub_actions)))
         W, A = previous_actions.shape
         if logits:
@@ -48,22 +48,29 @@ class ActionSmoothingLoss(nn.Module):
 
 if __name__ == "__main__":
     import gym
+    import numpy as np
     action_space = gym.spaces.MultiDiscrete([3, 3, 4, 25, 25, 8])
 
     # ActionSmoothingLoss
     loss = ActionSmoothingLoss(action_space)
 
-    # current_action
-    current_action = []
-    for num_actions in action_space.nvec:
-        current_action.append(torch.rand(1, num_actions))
-    current_action = torch.cat(current_action, dim=1).squeeze()
+    prev_action_logits = torch.randn(1000, 1, 68)
+    b_prev_action_logits = prev_action_logits.reshape(-1, sum(action_space.nvec))
+    b_inds = np.arange(128)
+    np.random.shuffle(b_inds)
+    minibatch_size = 128 // 1
+    for start in range(0, 128, minibatch_size):
+        end = start + minibatch_size
+        mb_inds = b_inds[start:end]
 
-    # previous_actions
-    previous_actions = []
-    for num_actions in action_space.nvec:
-        previous_actions.append(torch.rand(5, num_actions))
-    previous_actions = torch.cat(previous_actions, dim=1)
+        for mb_ind, action_logit in zip(mb_inds, b_prev_action_logits[mb_inds]):
+            start_window = max(0, mb_ind - 10)
+            # take the preceding n actions, take all the logits for these actions
+            if mb_ind == 0:
+                preceding_action_logits = b_prev_action_logits[0, :]
+            else:
+                preceding_action_logits = b_prev_action_logits[start_window:mb_ind, :]
+            a_loss = loss(action_logit, preceding_action_logits)
+
     # loss
-    loss_value = loss(current_action, previous_actions)
-    print(loss_value)
+    print(a_loss)
