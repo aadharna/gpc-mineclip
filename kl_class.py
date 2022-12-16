@@ -15,8 +15,8 @@ class ActionSmoothingLoss(nn.Module):
     def forward(self, current_action, previous_actions):
         """
         Args:
-            current_action: logits of current action [A (e.g., 68)]
-            previous_actions: [W, A]
+            current_action: probabilities for current action [A (e.g., 68)]
+            previous_actions: probabilities for previous actions [W, A]
             W: window size
             A: sum(self.action_space.nvec)
         """
