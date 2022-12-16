@@ -318,7 +318,7 @@ def main(cfg):
                         a_loss += actionSmoothingLoss(action_logit, preceding_action_logits)
                 a_loss /= len(mb_inds)
 
-                loss = pg_loss - entropy_loss * cfg.experiment.entropy_coef + v_loss * cfg.experiment.value_loss_coef + a_loss * cfg.experiment.action_smoothing_coef
+                loss = pg_loss - entropy_loss * cfg.experiment.entropy_coef + v_loss * cfg.experiment.value_loss_coef - a_loss * cfg.experiment.action_smoothing_coef
                 # Optimizer step
                 optimizer.zero_grad()
                 loss.backward()
