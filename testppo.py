@@ -309,8 +309,10 @@ def main(cfg):
                 a_loss = 0
                 if cfg.experiment.action_smoothing:
                     for mb_ind, action_logit in zip(mb_inds, b_prev_action_logits[mb_inds]):
-                        preceeding_action_logits = b_prev_action_logits[(mb_ind - cfg.experiment.action_smoothing_window):mb_ind, :]
-                        a_loss = actionSmoothingLoss(action_logit, preceeding_action_logits)
+                        start_window = max(0, mb_ind - cfg.experiment.action_smoothing_window)
+                        # take the preceding n actions, take all the logits for these actions
+                        preceding_action_logits = b_prev_action_logits[start_window:mb_ind, :]
+                        a_loss = actionSmoothingLoss(action_logit, preceding_action_logits)
 
                 loss = pg_loss - entropy_loss * cfg.experiment.entropy_coef + v_loss * cfg.experiment.value_loss_coef + a_loss * cfg.experiment.action_smoothing_coef
                 # Optimizer step
