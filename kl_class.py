@@ -5,14 +5,14 @@ from torch.nn import KLDivLoss
 
 
 class ActionSmoothingLoss(nn.Module):
-    def __init__(self, act_space, reduction='batchmean', logits=True):
+    def __init__(self, act_space, reduction='batchmean', log_target=True):
         super(ActionSmoothingLoss, self).__init__()
         self.kl_loss = KLDivLoss(reduction=reduction,
-                                 log_target=logits)
+                                 log_target=log_target)
         self.action_space = act_space
         self.sub_actions = self.action_space.nvec
 
-    def forward(self, current_action, previous_actions):
+    def forward(self, current_action, previous_actions, logits=True):
         """
         Args:
             current_action: probabilities for current action [A (e.g., 68)]
@@ -21,6 +21,14 @@ class ActionSmoothingLoss(nn.Module):
             A: sum(self.action_space.nvec)
         """
         W, A = previous_actions.shape
+        if logits:
+            for j in range(len(self.sub_actions)):
+                previous_actions[:, sum(self.sub_actions[:j]):
+                                    sum(self.sub_actions[:j+1])] = F.log_softmax(previous_actions[:, sum(self.sub_actions[:j]):
+                                                                                                     sum(self.sub_actions[:j+1])], dim=1)
+                current_action[sum(self.sub_actions[:j]):
+                               sum(self.sub_actions[:j+1])] = F.log_softmax(current_action[sum(self.sub_actions[:j]):
+                                                                                           sum(self.sub_actions[:j+1])], dim=0)
 
         loss = 0
         for i in range(W):
@@ -48,13 +56,13 @@ if __name__ == "__main__":
     # current_action
     current_action = []
     for num_actions in action_space.nvec:
-        current_action.append(nn.LogSoftmax(dim=1)(torch.rand(1, num_actions)))
+        current_action.append(torch.rand(1, num_actions))
     current_action = torch.cat(current_action, dim=1).squeeze()
 
     # previous_actions
     previous_actions = []
     for num_actions in action_space.nvec:
-        previous_actions.append(nn.Softmax(dim=1)(torch.rand(5, num_actions)))
+        previous_actions.append(torch.rand(5, num_actions))
     previous_actions = torch.cat(previous_actions, dim=1)
     # loss
     loss_value = loss(current_action, previous_actions)
