@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import mineclip.utils as U
 
-# ACTION_DIM = 3 * 3 * 4 * 25 * 25 * 8
+ACTION_DIM = [3, 3, 4, 25, 25, 8]
 
 class PrevActionEmb(nn.Module):
     def __init__(
@@ -12,8 +12,8 @@ class PrevActionEmb(nn.Module):
         device: torch.device,
     ):
         super().__init__()
-        self._embed = nn.Embedding(89, embed_dim)
-        # self._embed = nn.Linear(8, embed_dim)
+        # self._embed = nn.Embedding(68, embed_dim)
+        self._embed = nn.Linear(68, embed_dim) # FIXME
         self._output_dim = embed_dim
         self._device = device
 

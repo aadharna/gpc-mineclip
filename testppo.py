@@ -62,20 +62,21 @@ class ActorCritic(nn.Module):
         
     def get_action_and_value(self, obs, action=None, deterministic=False):
         # import ipdb; ipdb.set_trace()
-        logits = self.actor(obs.obs)[0]
+        action_dims = self.actor._action_dim
+        logits = self.actor(obs.obs)[0] # torch.Size([1, 68])
         probs = self.actor.dist_fn(logits)
         if action == None:
             action = probs.sample()
         if deterministic:
             action = probs.mode()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(obs.obs)
+        return action, probs.log_prob(action), probs.entropy(), self.critic(obs.obs), logits
     
 def convert_action_space(action):
     """
     Convert raw action 
     """
     
-def preprocess_obs(obs, info, prev_action, device):
+def preprocess_obs(obs, info, prev_action_logits, device):
     """
     Convert raw env obs to agent obs
     """
@@ -93,7 +94,7 @@ def preprocess_obs(obs, info, prev_action, device):
     biome_id = obs["location_stats"]["biome_id"] #(1, )
     prompt = info["prompt"]
     image = info["img_feats"]
-    prev_action = prev_action
+    prev_action = prev_action_logits
     if DEBUG:
         import ipdb; ipdb.set_trace()
     
@@ -107,8 +108,7 @@ def preprocess_obs(obs, info, prev_action, device):
         "biome_id": torch.tensor(
             biome_id.reshape(B, ), dtype=torch.long, device=device
         ), 
-        # "prev_action": torch.tensor(prev_action.reshape(B, ), device=device), 
-        "prev_action": torch.randint(low=0, high=88, size=(B, ), device=device),
+        "prev_action": torch.tensor(prev_action.reshape(B, 68), device=device),  
         # "prompt": torch.tensor(prompt.reshape(B, 512), device=device), 
         "prompt": prompt.clone().detach().reshape(B, 512),
         "image": image.clone().detach().reshape(B, 512)
@@ -177,7 +177,7 @@ def main(cfg):
     env.reset()
     action = env.action_space.no_op()
     next_obs, reward, next_done, info = env.step(env.action_space.no_op())
-    next_obs = preprocess_obs(next_obs, info, action, device)
+    next_obs = preprocess_obs(next_obs, info, torch.zeros((1, 68)), device)
     if DEBUG: 
         import ipdb; ipdb.set_trace()
     num_updates = int(cfg.experiment.total_timesteps // cfg.experiment.batch_size)
@@ -203,7 +203,7 @@ def main(cfg):
             # Collect rollout
             with torch.no_grad(): 
                 # import ipdb; ipdb.set_trace()
-                action, logprob, ent, value = agent.get_action_and_value(next_obs)
+                action, logprob, ent, value, logits = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             # import ipdb; ipdb.set_trace()
             actions[step] = action
@@ -220,7 +220,7 @@ def main(cfg):
                     images = wandb.Image(np.transpose(next_obs["rgb"], (1, 2, 0)), caption=f"reward spike: {reward}")
                     wandb.log({"examples": images})
                               
-            next_obs = preprocess_obs(next_obs, info, action, device)
+            next_obs = preprocess_obs(next_obs, info, logits, device)
             rewards[step] = torch.tensor(reward, device=device)
         
         if SAVE_GIF:
@@ -262,7 +262,7 @@ def main(cfg):
             for start in range(0, cfg.experiment.batch_size, minibatch_size):
                 end = start + minibatch_size
                 mb_inds = b_inds[start:end]
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(Batch(b_obs[mb_inds]), b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue, logits = agent.get_action_and_value(Batch(b_obs[mb_inds]), b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
                 
