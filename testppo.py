@@ -337,6 +337,7 @@ def main(cfg):
         wandb.log({"learnging_rate": optimizer.param_groups[0]['lr']}, step=timestep)
         wandb.log({"loss.policy_loss": pg_loss.item()}, step=timestep)
         wandb.log({"loss.value_loss": v_loss.item()}, step=timestep)
+        wandb.log({"loss.action_smoothing_loss": a_loss.item()}, step=timestep)
         wandb.log({"loss.entropy": entropy_loss.item()}, step=timestep)
         wandb.log({"loss.approx_kl": approx_kl.item()}, step=timestep)
         wandb.log({"loss.old_approx_kl": old_approx_kl.item()}, step=timestep)
