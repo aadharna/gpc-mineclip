@@ -315,7 +315,8 @@ def main(cfg):
                             preceding_action_logits = b_prev_action_logits[0, :]
                         else:
                             preceding_action_logits = b_prev_action_logits[start_window:mb_ind, :]
-                        a_loss = actionSmoothingLoss(action_logit, preceding_action_logits)
+                        a_loss += actionSmoothingLoss(action_logit, preceding_action_logits)
+                a_loss /= len(mb_inds)
 
                 loss = pg_loss - entropy_loss * cfg.experiment.entropy_coef + v_loss * cfg.experiment.value_loss_coef + a_loss * cfg.experiment.action_smoothing_coef
                 # Optimizer step
