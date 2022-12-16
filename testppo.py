@@ -5,6 +5,7 @@ import numpy as np
 
 import minedojo
 from wrappers import MineClipWrapper
+from kl_class import ActionSmoothingLoss
 
 from mineagent import MultiCategoricalActor, SimpleFeatureFusion
 from mineagent import features as F
@@ -155,7 +156,11 @@ def main(cfg):
         "find spider",
         "kill spider",
     ]
-    env = MineClipWrapper(env,prompts)
+    env = MineClipWrapper(env, prompts)
+    action_space = env.action_space
+    actionSmoothingLoss = ActionSmoothingLoss(act_space=action_space,
+                                              reduction='batchmean',
+                                              log_target=True)
     
     # Set up the agent
     agent = ActorCritic(cfg, device)
@@ -167,11 +172,12 @@ def main(cfg):
     obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs), dtype=object) # rollout_length x 1
     # FIXME: check dim of transformed action
     actions = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 6)).to(device)
+    prev_action_logits = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, sum(action_space.nvec))).to(device)
     logprobs = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     rewards = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     dones = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     values = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
-    
+
     # Training
     timestep = 0
     env.reset()
@@ -206,6 +212,7 @@ def main(cfg):
                 action, logprob, ent, value, logits = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             # import ipdb; ipdb.set_trace()
+            prev_action_logits[step] = logits
             actions[step] = action
             logprobs[step] = logprob
             
@@ -249,6 +256,7 @@ def main(cfg):
         if DEBUG: 
             import ipdb; ipdb.set_trace()
         b_actions = actions.reshape(-1, 6)
+        b_prev_action_logits = prev_action_logits.reshape(-1, sum(action_space.nvec))
         b_logprobs = logprobs.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
@@ -296,8 +304,15 @@ def main(cfg):
                 else:
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
                 entropy_loss = entropy.mean()
-                loss = pg_loss - entropy_loss * cfg.experiment.entropy_coef + v_loss * cfg.experiment.value_loss_coef
-                
+
+                # Action Smoothing Loss
+                a_loss = 0
+                if cfg.experiment.action_smoothing:
+                    for mb_ind, action_logit in zip(mb_inds, b_prev_action_logits[mb_inds]):
+                        preceeding_action_logits = b_prev_action_logits[(mb_ind - cfg.experiment.action_smoothing_window):mb_ind, :]
+                        a_loss = actionSmoothingLoss(action_logit, preceeding_action_logits)
+
+                loss = pg_loss - entropy_loss * cfg.experiment.entropy_coef + v_loss * cfg.experiment.value_loss_coef + a_loss * cfg.experiment.action_smoothing_coef
                 # Optimizer step
                 optimizer.zero_grad()
                 loss.backward()

@@ -57,7 +57,6 @@ experiment:
   clip: 0.2
   eps: 0.2
   ppo_epochs: 4
-  # action smoothing?
   n_minibatches: 1 # < n_envs
   n_train_epochs: 1 # number of training epochs per update
   normalize_advantage: True
@@ -65,6 +64,9 @@ experiment:
   clip_coef: 0.2 # Surrogate clipping coefficient
   entropy_coef: 0.01
   value_loss_coef: 0.5
+  action_smoothing: True
+  action_smoothing_window: 10
+  action_smoothing_coef: 0.4
   max_grad_norm: 0.5
   target_kl: None
   gif_interval: 100 # Episodes
