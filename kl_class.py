@@ -20,6 +20,8 @@ class ActionSmoothingLoss(nn.Module):
             W: window size
             A: sum(self.action_space.nvec)
         """
+        current_action = torch.reshape(current_action, sum(self.sub_actions))
+        previous_actions = torch.reshape(previous_actions, (-1, sum(self.sub_actions)))
         W, A = previous_actions.shape
         if logits:
             for j in range(len(self.sub_actions)):
