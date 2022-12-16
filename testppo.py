@@ -13,7 +13,11 @@ from tianshou.data import Batch
 
 import hydra
 import wandb
+from buffer import ReplayMemory
 # import moviepy, imageio # Not used in script but used in background by wandb for logging videos, do pip install moviepy imageio
+
+from collections import namedtuple
+
 
 DEBUG = False
 
@@ -160,6 +164,10 @@ def main(cfg):
     # Set up the agent
     agent = ActorCritic(cfg, device)
     optimizer = torch.optim.Adam(agent.parameters(), lr=cfg.experiment.learning_rate)
+    # TODO update capacity from hardcode
+    memory = ReplayMemory(capacity=100000)
+    Rollout = namedtuple('Rollout',
+                        ('states', 'actions'))
     
     # Set up storage
     # TODO: see if we can use tensor here with Batch
@@ -253,6 +261,9 @@ def main(cfg):
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
+
+        #TODO Add threshold for pushing to memory
+        memory.push(b_obs, b_actions)
         
         b_inds = np.arange(cfg.experiment.batch_size)
         clipfracs = []
@@ -323,6 +334,30 @@ def main(cfg):
         wandb.log({"loss.total_loss": loss.item()}, step=timestep)
         wandb.log({"loss.clipfrac": np.mean(clipfracs)}, step=timestep)
         wandb.log({"loss.explained_var": explained_var}, step=timestep)
+
+        # Self-Imitation Learning
+        rollout = memory.sample(batch_size=1)
+        batch = Rollout(*zip(*rollout))
+        b_obs = batch.states[0]
+        b_actions = batch.actions[0]
+
+        b_inds = np.arange(cfg.experiment.batch_size)
+    
+        for epoch in range(1):
+            np.random.shuffle(b_inds)
+            minibatch_size = cfg.experiment.batch_size // cfg.experiment.n_minibatches
+            for start in range(0, cfg.experiment.batch_size, minibatch_size):
+                end = start + minibatch_size
+                mb_inds = b_inds[start:end]
+                _, logprob, _, _ = agent.get_action_and_value(Batch(b_obs[mb_inds]), b_actions[mb_inds])
+                loss = torch.mean(-logprob)               
+                # Optimizer step
+                optimizer.zero_grad()
+                loss.backward()
+                # global gradient clipping
+                nn.utils.clip_grad_norm_(agent.parameters(), cfg.experiment.max_grad_norm)
+                optimizer.step()
+        print("FINISHED  ONE STEP OF SI")
         
     env.close()
     wandb.finish()
