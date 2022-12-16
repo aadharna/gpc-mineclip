@@ -83,6 +83,7 @@ class MonitorAndSwitchRewardFn(gym.Wrapper):
 
         if self.running_average >= self.subtask_solved_threshold:
             self.env.change_prompt()
+            info['subtask_solved'] = True
 
         return next_state, reward, done, info
 
