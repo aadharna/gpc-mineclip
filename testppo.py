@@ -170,7 +170,7 @@ def main(cfg):
     agent = ActorCritic(cfg, device)
     optimizer = torch.optim.Adam(agent.parameters(), lr=cfg.experiment.learning_rate)
     # TODO update capacity from hardcode
-    memory = ReplayMemory(capacity=100000)
+    memory = ReplayMemory(capacity=100000,si_counter=5)
     Rollout = namedtuple('Rollout',
                         ('states', 'actions'))
     
@@ -270,8 +270,9 @@ def main(cfg):
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
 
-        #TODO Add threshold for pushing to memory
-        memory.push(b_obs, b_actions)
+        if rewards.sum().item()  > memory.average_reward:
+            memory.push(b_obs, b_actions.long())
+        memory.average_reward = (memory.average_reward*i + rewards.sum().item())/(i+1)
         
         b_inds = np.arange(cfg.experiment.batch_size)
         clipfracs = []
@@ -364,22 +365,24 @@ def main(cfg):
         b_actions = batch.actions[0]
 
         b_inds = np.arange(cfg.experiment.batch_size)
-    
-        for epoch in range(1):
-            np.random.shuffle(b_inds)
-            minibatch_size = cfg.experiment.batch_size // cfg.experiment.n_minibatches
-            for start in range(0, cfg.experiment.batch_size, minibatch_size):
-                end = start + minibatch_size
-                mb_inds = b_inds[start:end]
-                _, logprob, _, _ = agent.get_action_and_value(Batch(b_obs[mb_inds]), b_actions[mb_inds])
-                loss = torch.mean(-logprob)               
-                # Optimizer step
-                optimizer.zero_grad()
-                loss.backward()
-                # global gradient clipping
-                nn.utils.clip_grad_norm_(agent.parameters(), cfg.experiment.max_grad_norm)
-                optimizer.step()
-        print("FINISHED  ONE STEP OF SI")
+
+        if (i+1)%memory.si_counter == 0 and len(memory) > 0:
+            for epoch in range(cfg.experiment.n_train_epochs):
+                np.random.shuffle(b_inds)
+                minibatch_size = cfg.experiment.batch_size // cfg.experiment.n_minibatches
+                for start in range(0, cfg.experiment.batch_size, minibatch_size):
+                    end = start + minibatch_size
+                    mb_inds = b_inds[start:end]
+                    logits = agent.actor(Batch(b_obs[mb_inds]).obs)[0] 
+                    dist_fn = agent.actor.dist_fn(logits)
+                    loss = dist_fn.imitation_loss(b_actions[mb_inds])             
+                    # Optimizer step
+                    optimizer.zero_grad()
+                    loss.backward()
+                    # global gradient clipping
+                    nn.utils.clip_grad_norm_(agent.parameters(), cfg.experiment.max_grad_norm)
+                    optimizer.step()
+            print("FINISHED  ONE STEP OF SI")
         
     env.close()
     wandb.finish()
