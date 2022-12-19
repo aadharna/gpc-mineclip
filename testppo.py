@@ -180,7 +180,7 @@ def main(cfg):
     obs = np.empty((cfg.experiment.rollout_length, cfg.experiment.n_envs), dtype=object) # rollout_length x 1
     # FIXME: check dim of transformed action
     actions = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 6)).to(device)
-    prev_action_logits = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, sum(action_space.nvec))).to(device)
+    prev_action_logits = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs, 68)).to(device)
     logprobs = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     rewards = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
     dones = torch.zeros((cfg.experiment.rollout_length, cfg.experiment.n_envs)).to(device)
