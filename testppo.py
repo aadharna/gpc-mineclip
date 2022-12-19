@@ -382,7 +382,7 @@ def main(cfg):
                     # global gradient clipping
                     nn.utils.clip_grad_norm_(agent.parameters(), cfg.experiment.max_grad_norm)
                     optimizer.step()
-            print("FINISHED  ONE STEP OF SI")
+            wandb.log({"loss.imitation_loss": loss.item()}, step=timestep)
         
     env.close()
     wandb.finish()
