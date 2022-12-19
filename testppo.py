@@ -151,14 +151,18 @@ def main(cfg):
     
     # Set up the environment TODO: vectorize to have n_envs > 1
     env = minedojo.make(
-        task_id="combat_spider_plains_leather_armors_diamond_sword_shield",
+        task_id="harvest_wool_with_shears_and_sheep",
         image_size=(160, 256),
         world_seed=123,
         seed=42,
     )
+
     prompts = [
-        "find spider",
-        "kill spider",
+        "find a sheep",
+        "right-click on the sheep with your hand to interact with it",
+        "when the sheep's health bar appears, wait for it to turn white",
+        "left-click on the sheep to shear it",
+        "collect the wool that appears",
     ]
     env = MineClipWrapper(env, prompts)
     action_space = gym.spaces.MultiDiscrete((3,3,4,25,25,8))
@@ -367,6 +371,7 @@ def main(cfg):
         b_inds = np.arange(cfg.experiment.batch_size)
 
         if (i+1)%memory.si_counter == 0 and len(memory) > 0:
+            avg_loss = 0
             for epoch in range(cfg.experiment.n_train_epochs):
                 np.random.shuffle(b_inds)
                 minibatch_size = cfg.experiment.batch_size // cfg.experiment.n_minibatches
@@ -382,7 +387,8 @@ def main(cfg):
                     # global gradient clipping
                     nn.utils.clip_grad_norm_(agent.parameters(), cfg.experiment.max_grad_norm)
                     optimizer.step()
-            wandb.log({"loss.imitation_loss": loss.item()}, step=timestep)
+                    avg_loss += loss.item()
+            wandb.log({"loss.imitation_loss": avg_loss/cfg.experiment.n_train_epochs}, step=timestep)
         
     env.close()
     wandb.finish()
