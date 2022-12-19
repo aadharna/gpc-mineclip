@@ -161,8 +161,8 @@ def main(cfg):
         "kill spider",
     ]
     env = MineClipWrapper(env, prompts)
-    action_space = env.action_space
-    actionSmoothingLoss = ActionSmoothingLoss(act_space=action_space,
+    action_space = gym.spaces.MultiDiscrete((3,3,4,25,25,8))
+    actionSmoothingLoss = ActionSmoothingLoss(act_space= action_space,
                                               reduction='batchmean',
                                               log_target=True)
     
@@ -264,7 +264,7 @@ def main(cfg):
         if DEBUG: 
             import ipdb; ipdb.set_trace()
         b_actions = actions.reshape(-1, 6)
-        b_prev_action_logits = prev_action_logits.reshape(-1, sum(action_space.nvec))
+        b_prev_action_logits = prev_action_logits.reshape(-1, 68)
         b_logprobs = logprobs.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
